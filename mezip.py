@@ -7,6 +7,7 @@
 """
 
 import argparse
+from bitarray import bitarray
 import math
 
 BYTE_ORDER = 'big'
@@ -100,7 +101,7 @@ def tokenize(text):
     return (tokens, symbols)
 
 def encode(tokens, symbols):
-    bin_str = ''
+    bin_encod = bitarray()
     bits_to_use = 0
     bit_counter = 0 
     last_token = tokens[-1]
@@ -109,8 +110,8 @@ def encode(tokens, symbols):
     symbol_fmt_str = '{0:0' + str(digits_in_sym_code(symbols)) + 'b}'
     
     for idx, token in enumerate(tokens):
-        if bin_str == '': # if the first symbol, deal with it specially
-            bin_str = symbolCode(token, symbols, symbol_fmt_str)
+        if bin_encod.length() == 0: # if the first symbol, deal with it specially
+            bin_encod = bitarray(symbolCode(token, symbols, symbol_fmt_str))
             bits_to_use = bits_to_use + 1
             bit_counter = 1
         else: # if not the first item, deal with it normally
@@ -133,14 +134,14 @@ def encode(tokens, symbols):
                 new_phrase = dict_idx_str 
 
 
-            bin_str = bin_str + new_phrase
+            bin_encod.extend(new_phrase)
 
             bit_counter = bit_counter - 1
             if bit_counter == 0:
                 bits_to_use = bits_to_use + 1
                 bit_counter = 2 ** (bits_to_use - 1)
 
-    return bin_str
+    return bin_encod.to01()
 
 
 def symbolCode(symbol, symbols, format_str):
