@@ -9,6 +9,7 @@
 import argparse
 from bitarray import bitarray
 import math
+import os
 
 BYTE_ORDER = 'big'
 
@@ -22,15 +23,25 @@ def main():
     # create a command line parser with the argparse module
     parser = argparse.ArgumentParser('Implementaiton of LZ78 compression')
     parser.add_argument('-c', help='compress', action='store_true')
-    parser.add_argument('ifiles', metavar='files', type=str, nargs='+',
+    parser.add_argument('-i',  metavar='input_files', type=str, nargs='+',
                         help='input files')
+    parser.add_argument('-o', metavar='output_dir', type=str, nargs='?',
+            default=None, help='output dir')
 
     args = parser.parse_args()
-    
+
+    if args.o is not None:
+        if not os.path.isdir(args.o):
+            print("arg output_dir is not directory")
+            exit(-1)
+    else:
+        args.o = '.'
+
+
     # compress or decompress every file in the input list
-    for file in args.ifiles:
-        if args.c is True: compress(file)
-        else: decompress(file) 
+    for file in args.i:
+        if args.c is True: compress(file, args.o)
+        else: decompress(file, args.o)
 
 #---------------------------------------------------------------------------
 #
@@ -38,7 +49,7 @@ def main():
 #
 #---------------------------------------------------------------------------
 
-def compress(inputFile):
+def compress(inputFile, outputDir):
 
     # read the input text from the file
     text = ''
@@ -74,10 +85,9 @@ def compress(inputFile):
     dataAsBytes = compressedData.to_bytes(payload_size, byteorder=BYTE_ORDER)
     #print(dataAsBytes)
 
-    baseOFilePath = '.' + ''.join(inputFile.split('.')[:-1])
-    outputFile = baseOFilePath + '.mz'
+    outputFile = os.path.splitext(os.path.basename(inputFile))[0] + '.mz'
 
-    with open(outputFile, 'wb') as f:
+    with open(os.path.join(outputDir, outputFile), 'wb') as f:
         f.write(dataAsBytes)
 
 def tokenize(text):
@@ -103,12 +113,12 @@ def tokenize(text):
 def encode(tokens, symbols):
     bin_encod = bitarray()
     bits_to_use = 0
-    bit_counter = 0 
+    bit_counter = 0
     last_token = tokens[-1]
     last_index = len(tokens) - 1
     last_is_cpy = not (last_index == tokens.index(last_token))
     symbol_fmt_str = '{0:0' + str(digits_in_sym_code(symbols)) + 'b}'
-    
+
     for idx, token in enumerate(tokens):
         if bin_encod.length() == 0: # if the first symbol, deal with it specially
             bin_encod = bitarray(symbolCode(token, symbols, symbol_fmt_str))
@@ -167,7 +177,7 @@ def digits_in_sym_code(symbols):
 #
 #---------------------------------------------------------------------------
 
-def decompress(inputFile):
+def decompress(inputFile, outputDir):
 
     decoded_string = ''
 
@@ -218,10 +228,9 @@ def decompress(inputFile):
         decoded_string = ''.join(decoded_tokens)
         print(decoded_string)
 
-    baseOFilePath = '.' + ''.join(inputFile.split('.')[:-1])
-    outputFile = baseOFilePath + '.txt_dec'
+    outputFile = os.path.splitext(os.path.basename(inputFile))[0] + '.txt_dec'
 
-    with open(outputFile, 'w') as f:
+    with open(os.path.join(outputDir, outputFile), 'w') as f:
         f.write(decoded_string)
 
 
@@ -261,8 +270,8 @@ def tokenize_compressed(byte_string, bits_per_sym):
     token_index = 0
     token = ''
     bits_to_use = 0
-    bit_counter = 0 
-    
+    bit_counter = 0
+
     while token_index + 1 < len(byte_string):
         if token_count < 1:
             token = byte_string[0:bits_per_sym]
@@ -276,7 +285,7 @@ def tokenize_compressed(byte_string, bits_per_sym):
                 token = byte_string[token_index:token_index+len_token]
             else:
                 token = byte_string[token_index:]
-                
+
             token_count = token_count + 1
             token_index = token_index + len_token
 
@@ -286,7 +295,7 @@ def tokenize_compressed(byte_string, bits_per_sym):
                 bit_counter = 2 ** (bits_to_use - 1)
 
         tokens.append(token)
-            
+
     return tokens
 
 
