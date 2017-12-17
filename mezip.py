@@ -62,7 +62,7 @@ def compress(inputFile, outputDir):
     #print(text) # debug
 
     binaryString = encode(ngrams, symbol_dict)
-    #print(binaryString)
+    print(binaryString)
     #print(len(binaryString))
 
     # we might have to pad our string of 1's ad 0's with some extra 0's to make
@@ -75,8 +75,10 @@ def compress(inputFile, outputDir):
 
     #print(binaryString)
 
+    print('zeros needed:')
+    print(zeros_needed)
     header = makeHeader(symbol_dict, zeros_needed)
-    #print(header)
+    print(header)
 
     payload = header + binaryString
     payload_size = len(payload) // 8
@@ -134,7 +136,7 @@ def encode(tokens, symbols):
 
             dict_idx_str = (format_str.format(dict_idx))
 
-            if not(last_is_cpy and token is last_token):
+            if not(last_is_cpy and token is last_token and idx == last_index):
                 new_symbol_code = symbolCode(token[-1:], symbols, symbol_fmt_str)
                 if int(new_symbol_code,2) > len(symbols):
                     print("We have a problem here")
@@ -142,7 +144,6 @@ def encode(tokens, symbols):
                 new_phrase = dict_idx_str + new_symbol_code
             else: # it is the last token and we have a duplicate
                 new_phrase = dict_idx_str 
-
 
             bin_encod.extend(new_phrase)
 
@@ -165,6 +166,8 @@ def makeHeader(symbols, num_zeros):
     for symbol in symbols:
         header = header + format_str.format(ord(symbol))
 
+    # use one byte to encode the number of zeros we
+    # had to pad our payload with to make it byte-aligned
     header = header + format_str.format(num_zeros)
 
     return header
@@ -193,7 +196,7 @@ def decompress(inputFile, outputDir):
 
         byte_string = getByteString(f, num_pad_zeros)
 
-        tokens = tokenize_compressed(byte_string, bits_per_sym)
+        tokens = tokenizeCompressed(byte_string, bits_per_sym)
 
         last_token = tokens[-1]
         second_to_last_token = tokens[-2]
@@ -264,7 +267,7 @@ def getByteString(fHandle, num_zeros):
     else:
         return byte_string
 
-def tokenize_compressed(byte_string, bits_per_sym):
+def tokenizeCompressed(byte_string, bits_per_sym):
     tokens = []
     token_count = 0
     token_index = 0
