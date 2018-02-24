@@ -61,35 +61,29 @@ def compress(inputFile, outputDir):
     ngrams, symbol_dict = tokenize(text)
     #print(text) # debug
 
-    binaryString = encode(ngrams, symbol_dict)
-    #print(binaryString)
+    bin_string = encode(ngrams, symbol_dict)
+
+    bin_string, zero_pad = byte_align(bin_string)
+    
+    print(bin_string)
     #print(len(binaryString))
 
-    # we might have to pad our string of 1's ad 0's with some extra 0's to make
-    # everything byte aligned. This information is encoded in the header
-    zeros_needed = 0
-    if len(binaryString) % 8 != 0:
-        zeros_needed = 8 - (len(binaryString) % 8)
-        format_str = '{0:0' + str(zeros_needed) +'b}'
-        binaryString = binaryString + format_str.format(0)
+    print('zeros needed:')
+    print(zero_pad)
+    header = makeHeader(symbol_dict, zero_pad)
+    print(header)
 
-    #print(binaryString)
+    header.extend(bin_string)
+    payload = header
 
-    header = makeHeader(symbol_dict, zeros_needed)
-    #print(header)
-
-    payload = header + binaryString
-    payload_size = len(payload) // 8
-
-    compressedData = int(payload, 2)
-    dataAsBytes = compressedData.to_bytes(payload_size, byteorder=BYTE_ORDER)
     #print(dataAsBytes)
 
     outputFile = os.path.splitext(os.path.basename(inputFile))[0] + '.mz'
 
     with open(os.path.join(outputDir, outputFile), 'wb') as f:
-        f.write(dataAsBytes)
+        payload.tofile(f)
 
+# tokenize input text and create a dictionary of symbols
 def tokenize(text):
     tokens = []
     symbols = []
@@ -109,6 +103,7 @@ def tokenize(text):
         tokens.append(accumulated)
 
     return (tokens, symbols)
+
 
 def encode(tokens, symbols):
     bin_encod = bitarray()
@@ -134,7 +129,7 @@ def encode(tokens, symbols):
 
             dict_idx_str = (format_str.format(dict_idx))
 
-            if not(last_is_cpy and token is last_token):
+            if not(last_is_cpy and token is last_token and idx == last_index):
                 new_symbol_code = symbolCode(token[-1:], symbols, symbol_fmt_str)
                 if int(new_symbol_code,2) > len(symbols):
                     print("We have a problem here")
@@ -143,7 +138,6 @@ def encode(tokens, symbols):
             else: # it is the last token and we have a duplicate
                 new_phrase = dict_idx_str 
 
-
             bin_encod.extend(new_phrase)
 
             bit_counter = bit_counter - 1
@@ -151,7 +145,7 @@ def encode(tokens, symbols):
                 bits_to_use = bits_to_use + 1
                 bit_counter = 2 ** (bits_to_use - 1)
 
-    return bin_encod.to01()
+    return bin_encod
 
 
 def symbolCode(symbol, symbols, format_str):
@@ -160,17 +154,31 @@ def symbolCode(symbol, symbols, format_str):
 def makeHeader(symbols, num_zeros):
     format_str = '{0:08b}'
 
-    header = format_str.format(len(symbols))
+    header = bitarray(format_str.format(len(symbols)))
 
     for symbol in symbols:
-        header = header + format_str.format(ord(symbol))
+        header.extend(format_str.format(ord(symbol)))
 
-    header = header + format_str.format(num_zeros)
+    # use one byte to encode the number of zeros we
+    # had to pad our payload with to make it byte-aligned
+    header.extend(format_str.format(num_zeros))
 
     return header
 
 def digits_in_sym_code(symbols):
     return math.ceil(math.log(len(symbols), 2))
+
+def byte_align(bin_encod):
+    # after creating our binary encoding, we need to byte align it
+    zeros_needed = 0
+    if len(bin_encod) % 8 != 0:
+        zeros_needed = 8 - (len(bin_encod) % 8)
+        format_str = '{0:0' + str(zeros_needed) +'b}'
+        bin_encod.extend(format_str.format(0))
+
+    return bin_encod, zeros_needed
+
+
 #---------------------------------------------------------------------------
 #
 # decompression methods
@@ -193,7 +201,7 @@ def decompress(inputFile, outputDir):
 
         byte_string = getByteString(f, num_pad_zeros)
 
-        tokens = tokenize_compressed(byte_string, bits_per_sym)
+        tokens = tokenizeCompressed(byte_string, bits_per_sym)
 
         last_token = tokens[-1]
         second_to_last_token = tokens[-2]
@@ -264,7 +272,7 @@ def getByteString(fHandle, num_zeros):
     else:
         return byte_string
 
-def tokenize_compressed(byte_string, bits_per_sym):
+def tokenizeCompressed(byte_string, bits_per_sym):
     tokens = []
     token_count = 0
     token_index = 0
