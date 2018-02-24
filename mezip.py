@@ -11,7 +11,7 @@ from bitarray import bitarray
 import math
 import os
 
-BYTE_ORDER = 'big'
+BYTE_ORDER = 'big' # use bigendian byte order
 
 #---------------------------------------------------------------------------
 #
@@ -37,7 +37,6 @@ def main():
     else:
         args.o = '.'
 
-
     # compress or decompress every file in the input list
     for file in args.i:
         if args.c is True: compress(file, args.o)
@@ -51,37 +50,43 @@ def main():
 
 def compress(inputFile, outputDir):
 
+    # TODO: make this read input format agnostic (i.e. just read bytes
+    # don't expect it to be text)
     # read the input text from the file
     text = ''
     with open(inputFile, 'r') as f:
         text = f.read()
 
+    # TODO combine tokenize and encode into single method
+    # should be able to do both in a single pass
+
     # tokenize the input text to ngrams, also form a dictonary of the base
     # symbol set
     ngrams, symbol_dict = tokenize(text)
-    #print(text) # debug
 
+    # use the tokenized file and symbol dictonary to
+    # form an encoded (compressed) string of bits
     bin_string = encode(ngrams, symbol_dict)
 
+    # make sure our encoded data is byte aligned
+    # by padding with extra zeros on the end if necessary
     bin_string, zero_pad = byte_align(bin_string)
-    
-    print(bin_string)
-    #print(len(binaryString))
 
-    print('zeros needed:')
-    print(zero_pad)
+    # made the header using the symbol dictionary
+    # and number of zeros to pad with
     header = makeHeader(symbol_dict, zero_pad)
-    print(header)
 
+    # concatinate the header and the encoded data
     header.extend(bin_string)
-    payload = header
+    payload = header # rename concated data to payload
 
-    #print(dataAsBytes)
-
+    # get the output file path + name
     outputFile = os.path.splitext(os.path.basename(inputFile))[0] + '.mz'
 
+    # write the compressed data to file
     with open(os.path.join(outputDir, outputFile), 'wb') as f:
         payload.tofile(f)
+
 
 # tokenize input text and create a dictionary of symbols
 def tokenize(text):
@@ -105,6 +110,7 @@ def tokenize(text):
     return (tokens, symbols)
 
 
+# TODO add comments explaining encoding process
 def encode(tokens, symbols):
     bin_encod = bitarray()
     bits_to_use = 0
