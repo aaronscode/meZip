@@ -39,7 +39,7 @@ def main():
 
     # compress or decompress every file in the input list
     for file in args.i:
-        if args.c is True: compress(file, args.o)
+        if args.c is True: read_compress_write(file, args.o)
         else: decompress(file, args.o)
 
 #---------------------------------------------------------------------------
@@ -48,15 +48,24 @@ def main():
 #
 #---------------------------------------------------------------------------
 
-def compress(inputFile, outputDir):
+def read_compress_write(input_file, output_dir):
+        # TODO refactor into bytearray, not text
+        # read the input text from the file
+        text = ''
+        with open(inputFile, 'r') as f:
+            text = f.read()
 
-    # TODO: make this read input format agnostic (i.e. just read bytes
-    # don't expect it to be text)
-    # read the input text from the file
-    text = ''
-    with open(inputFile, 'r') as f:
-        text = f.read()
+        payload = compress(text)
 
+        # get the output file path + name
+        output_file = os.path.splitext(os.path.basename(input_file))[0] + '.mz'
+
+        # write the compressed data to file
+        with open(os.path.join(output_dir, output_file), 'wb') as f:
+            payload.tofile(f)
+
+
+def compress(text):
     # TODO combine tokenize and encode into single method
     # should be able to do both in a single pass
 
@@ -78,14 +87,7 @@ def compress(inputFile, outputDir):
 
     # concatinate the header and the encoded data
     header.extend(bin_string)
-    payload = header # rename concated data to payload
-
-    # get the output file path + name
-    outputFile = os.path.splitext(os.path.basename(inputFile))[0] + '.mz'
-
-    # write the compressed data to file
-    with open(os.path.join(outputDir, outputFile), 'wb') as f:
-        payload.tofile(f)
+    return header # header now contains header and compressed data
 
 
 # tokenize input text and create a dictionary of symbols
