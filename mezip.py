@@ -52,7 +52,7 @@ def read_compress_write(input_file, output_dir):
         # TODO refactor into bytearray, not text
         # read the input text from the file
         text = ''
-        with open(inputFile, 'r') as f:
+        with open(input_file, 'r') as f:
             text = f.read()
 
         payload = compress(text)
