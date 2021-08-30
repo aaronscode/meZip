@@ -123,7 +123,7 @@ def encode(tokens, symbols):
     symbol_fmt_str = '{0:0' + str(digits_in_sym_code(symbols)) + 'b}'
 
     for idx, token in enumerate(tokens):
-        if bin_encod.length() == 0: # if the first symbol, deal with it specially
+        if len(bin_encod) == 0: # if the first symbol, deal with it specially
             bin_encod = bitarray(symbolCode(token, symbols, symbol_fmt_str))
             bits_to_use = bits_to_use + 1
             bit_counter = 1
