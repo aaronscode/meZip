@@ -22,7 +22,7 @@ I used hyperfine to run a very simple benchmark comparing my compression utility
 ![meZip  Hyperfine Results](res/mezip_speed.png)
 ![gzip  Hyperfine Results](res/gzip_speed.png)
 
-From this benchmark, we can see that meZip is incredible slow, at about 3000 times slower than gzip on this particular task. Part of this can be attributed to the fact that meZip is written in python, but there are also some glaring inefficiencies in how I wrote it. For example, the fact that compression iterates over the contents of the file being compressed twice.
+From this benchmark, we can see that meZip is incredibly slow, at about 3000 times slower than gzip on this particular task. Part of this can be attributed to the fact that meZip is written in python, but there are also some glaring inefficiencies in how I wrote it. For example, the fact that compression iterates over the contents of the file being compressed twice.
 
 On the front of compression ratio, however, meZip fares a little better. Uncompressed, Pride and Prejudice takes up about 709 KB on disk. With default options, gzip compresses that down to 254 KB, a compression ratio of 35%. MeZip doesn't get quite that small, but still does pretty well at 317 KB, yielding a ratio of 44%, or just under 10% bigger than gzip. If mezip were at all optimized (it isn't), at least I could claim it was optimized for compression size.
 
